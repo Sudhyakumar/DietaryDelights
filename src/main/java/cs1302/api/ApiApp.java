@@ -44,7 +44,7 @@ public class ApiApp extends Application {
     Scene scene;
     VBox root;
 
-    HBox topHBox;
+    HBox topHeader;
     TextField foodUser;
     ComboBox<String> dietUser;
 
@@ -52,10 +52,40 @@ public class ApiApp extends Application {
 
     Label status;
 
-    HBox resultBox;
-    TextArea result;
-    ScrollPane textPane;
-    TextFlow textFlow;
+    VBox resultBox;
+    HBox topHBox;
+
+    VBox recipe1;
+    ImageView imageView1;
+    Label titleLabel1;
+    Label urlLabel1;
+    Label priceLabel1;
+
+
+    VBox recipe2;
+    ImageView imageView2;
+    Label titleLabel2;
+    Label urlLabel2;
+    Label priceLabel2;
+    //RecipeComponent rc1;
+    //RecipeComponent rc2;
+    HBox bottomHBox;
+    VBox recipe3;
+    ImageView imageView3;
+    Label titleLabel3;
+    Label urlLabel3;
+    Label priceLabel3;
+
+    VBox recipe4;
+    ImageView imageView4;
+    Label titleLabel4;
+    Label urlLabel4;
+    Label priceLabel4;
+    //RecipeComponent rc3;
+    //RecipeComponent rc4;
+    //TextArea result;
+    //ScrollPane textPane;
+    //TextFlow textFlow;
 
     /**
      * Constructs an {@code ApiApp} object. This default (i.e., no argument)
@@ -66,7 +96,7 @@ public class ApiApp extends Application {
         this.scene = null;
         this.root = new VBox();
 
-        this.topHBox = new HBox();
+        this.topHeader = new HBox();
         Label title = new Label("Personalized Recipe Finder");
         title.setStyle("-fx-font-size: 26px; -fx-font-weight: bold;");
         foodUser = new TextField();
@@ -78,24 +108,61 @@ public class ApiApp extends Application {
 
         search = new Button("Search");
         status = new Label();
-        this.resultBox = new HBox();
-        this.textPane = new ScrollPane();
-        this.textFlow = new TextFlow();
-        result = new TextArea();
-        result.setEditable(false);
+        this.resultBox = new VBox();
+        this.topHBox = new HBox();
+
+        this.recipe1 = new VBox();
+        this.imageView1 = new ImageView();
+        this.titleLabel1 = new Label();
+        this.urlLabel1 = new Label();
+        this.priceLabel1 = new Label();;
+
+        this.recipe2 = new VBox();
+        this.imageView2 = new ImageView();
+        this.titleLabel2 = new Label();
+        this.urlLabel2 = new Label();
+        this.priceLabel2 = new Label();
+        //this.rc1 = new RecipeComponent();
+        //this.rc2 = new RecipeComponent();
+        this.bottomHBox = new HBox();
+
+        this.recipe3 = new VBox();
+        this.imageView3 = new ImageView();
+        this.titleLabel3 = new Label();
+        this.urlLabel3 = new Label();
+        this.priceLabel3 = new Label();
+
+        this.recipe4 = new VBox();
+        this.imageView4 = new ImageView();
+        this.titleLabel4 = new Label();
+        this.urlLabel4 = new Label();
+        this.priceLabel4 = new Label();
+        //this.rc3 = new RecipeComponent();
+        //this.rc4 = new RecipeComponent();
+
+        //this.textPane = new ScrollPane();
+        //this.textFlow = new TextFlow();
+        //result = new TextArea();
+        //result.setEditable(false);
     } // ApiApp
 
 
     /**{@inheritDoc}*/
     @Override
     public void init() {
-        this.topHBox.getChildren().addAll(foodUser, dietUser, search);
-        //this.resultBox.getChildren().addAll(result);
-        this.textFlow.getChildren().add(new Text("Click \"Search\" to load the recipe results..."));
-        this.textFlow.setMaxWidth(630);
-        this.textPane.setPrefHeight(480);
-        this.textPane.setContent(this.textFlow);
-        this.root.getChildren().addAll(topHBox, this.textPane);
+        this.topHeader.getChildren().addAll(foodUser, dietUser, search);
+        this.recipe1.getChildren().addAll(imageView1, titleLabel1, urlLabel1, priceLabel1);
+        this.recipe2.getChildren().addAll(imageView2, titleLabel2, urlLabel2, priceLabel2);
+        this.topHBox.getChildren().addAll(recipe1, recipe2);
+        this.recipe3.getChildren().addAll(imageView3, titleLabel3, urlLabel3, priceLabel3);
+        this.recipe4.getChildren().addAll(imageView4, titleLabel4, urlLabel4, priceLabel4);
+        this.bottomHBox.getChildren().addAll(recipe3, recipe4);
+        this.resultBox.getChildren().addAll(topHBox, bottomHBox);
+        //this.textFlow.getChildren().add(new Text("Click \"Search\" to load the recipe results..."));
+        //this.textFlow.setMaxWidth(630);
+        //this.textPane.setPrefHeight(480);
+        //this.textPane.setContent(this.textFlow);
+        this.root.getChildren().addAll(topHeader, this.resultBox);
     } // init
 
     /** {@inheritDoc} */
@@ -139,24 +206,16 @@ public class ApiApp extends Application {
             String spoonacular_API = "https://api.spoonacular.com/recipes/complexSearch?query=";
             String food = URLEncoder.encode(foodUser.getText(), StandardCharsets.UTF_8);
             String diet = URLEncoder.encode(dietUser.getValue(), StandardCharsets.UTF_8);
-            //String cuisine = URLEncoder.encode(cuisineUser.getValue(), StandardCharsets.UTF_8);
-            //String intolerance = URLEncoder.encode(intoleranceUser.getValue(), StandardCharsets.UTF_8);
 
             String urlBuilder = new String();
             urlBuilder += food;
-            //if (!cuisine.isEmpty()) {
-            // urlBuilder+="&cuisine=";
-            //  urlBuilder+=cuisine;
-            //}
+
             if (!diet.isEmpty()) {
              urlBuilder+="&diet=";
               urlBuilder+=diet;
             }
-            //if (!intolerance.isEmpty()) {
-            //  urlBuilder+="&intolerances=";
-            //  urlBuilder+=intolerance;
-            //}
-            urlBuilder+="&apiKey=";
+
+            urlBuilder+="&number=4&apiKey=";
             urlBuilder+=spoonacularApiKey;
             String uri = spoonacular_API + urlBuilder;
 
@@ -170,55 +229,156 @@ public class ApiApp extends Application {
             }
 
             String jsonString = response.body();
-            System.out.println("********** RAW JSON STRING: **********");
-            System.out.println(jsonString.trim());
+            //System.out.println("********** RAW JSON STRING: **********");
+            //System.out.println(jsonString.trim());
 
 
-            SpoonacularResponse spoonacularResponse = GSON
-                .fromJson(jsonString, SpoonacularResponse.class);
-            printSpoonacularResponse(spoonacularResponse);
+            ComplexSearchResponse complexSearchResponse = GSON
+                .fromJson(jsonString, ComplexSearchResponse.class);
+            //printRecipeInfoResponse(complexSearchResponse);
 
-            // parse the JSON-formatted string using GSON
+            for (int i = 0; i < complexSearchResponse.results.length; i++) {
+                ComplexSearchResult result = complexSearchResponse.results[i];
+
+                String recipeURI = "https://api.spoonacular.com/recipes/" + result.id + "/information?includeNutrition=false&apiKey=" + spoonacularApiKey;
+                HttpRequest requestRecipeInfo = HttpRequest.newBuilder()
+                    .uri(URI.create(recipeURI))
+                    .build();
+                HttpResponse<String> responseRecipeInfo = HTTP_CLIENT
+                    .send(requestRecipeInfo, BodyHandlers.ofString());
+                if(responseRecipeInfo.statusCode() != 200) {
+                    throw new IOException(responseRecipeInfo.toString());
+                }
+                String jsonString2 = responseRecipeInfo.body();
+
+                RecipeInfoResponse recipeInfoResponse = GSON
+                    .fromJson(jsonString2, RecipeInfoResponse.class);
+                if(i == 0) {
+                    this.recipe1.setSpacing(10);
+                    this.recipe1.setAlignment(Pos.CENTER);
+
+                    // Create and add ImageView
+                    imageView1.setImage(new Image(recipeInfoResponse.image, 200, 200, true, true));
+
+                    // Create and add title label
+                    titleLabel1.setText(recipeInfoResponse.title);
+                    titleLabel1.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
+
+                    // Create and add URL label
+                    urlLabel1.setText(recipeInfoResponse.sourceUrl);
+                    urlLabel1.setStyle("-fx-font-size: 8pt;");
+
+                    // Create and add price label
+                    priceLabel1.setText(recipeInfoResponse.pricePerServing);
+                    priceLabel1.setStyle("-fx-font-size: 8pt; -fx-font-weight: bold;");
+
+                } else if (i == 1) {
+                    this.recipe2.setSpacing(10);
+                    this.recipe2.setAlignment(Pos.CENTER);
+
+                    // Create and add ImageView
+                    imageView2.setImage(new Image(recipeInfoResponse.image, 200, 200, true, true));
+
+                    // Create and add title label
+                    titleLabel2.setText(recipeInfoResponse.title);
+                    titleLabel2.setStyle("-fx-font-size: 18pt; -fx-font-weight: bold;");
+
+                    // Create and add URL label
+                    urlLabel2.setText(recipeInfoResponse.sourceUrl);
+                    urlLabel2.setStyle("-fx-font-size: 12pt;");
+
+                    // Create and add price label
+                    priceLabel2.setText(recipeInfoResponse.pricePerServing);
+                    priceLabel2.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
+                } else if (i == 2) {
+                    this.recipe3.setSpacing(10);
+                    this.recipe3.setAlignment(Pos.CENTER);
+
+                    // Create and add ImageView
+                    imageView3.setImage(new Image(recipeInfoResponse.image, 200, 200, true, true));
+
+                    // Create and add title label
+                    titleLabel3.setText(recipeInfoResponse.title);
+                    titleLabel3.setStyle("-fx-font-size: 18pt; -fx-font-weight: bold;");
+
+                    // Create and add URL label
+                    urlLabel3.setText(recipeInfoResponse.sourceUrl);
+                    urlLabel3.setStyle("-fx-font-size: 12pt;");
+
+                    // Create and add price label
+                    priceLabel3.setText(recipeInfoResponse.pricePerServing);
+                    priceLabel3.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
+
+                } else if(i == 3) {
+                    this.recipe4.setSpacing(10);
+                    this.recipe4.setAlignment(Pos.CENTER);
+
+                    // Create and add ImageView
+                    imageView4.setImage(new Image(recipeInfoResponse.image, 200, 200, true, true));
+
+                    // Create and add title label
+                    titleLabel4.setText(recipeInfoResponse.title);
+                    titleLabel4.setStyle("-fx-font-size: 18pt; -fx-font-weight: bold;");
+
+                    // Create and add URL label
+                    urlLabel4.setText(recipeInfoResponse.sourceUrl);
+                    urlLabel4.setStyle("-fx-font-size: 12pt;");
+
+                    // Create and add price label
+                    priceLabel4.setText(recipeInfoResponse.pricePerServing);
+                    priceLabel4.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
+                }
+
+                System.out.printf(" - id = %s\n", recipeInfoResponse.id);
+                System.out.printf(" - title = %s\n", recipeInfoResponse.title);
+                System.out.printf(" - image = %s\n", recipeInfoResponse.image);
+                System.out.printf(" - imageType = %s\n", recipeInfoResponse.imageType);
+                System.out.printf(" - sourceUrl = %s\n", recipeInfoResponse.sourceUrl);
+                System.out.printf(" - pricePerServing = %s\n", recipeInfoResponse.pricePerServing);
+
+            }
+
         } catch (IOException | InterruptedException | IllegalArgumentException e) {
             System.err.println(e);
             e.printStackTrace();
         }
     }
 
-    private void printSpoonacularResponse(SpoonacularResponse spoonacularResponse)    {
+    private void printRecipeInfoResponse(ComplexSearchResponse complexSearchResponse)    {
         try {
         System.out.println();
         System.out.println("********** PRETTY JSON STRING: **********");
-        System.out.println(GSON.toJson(spoonacularResponse));
+        System.out.println(GSON.toJson(complexSearchResponse));
         System.out.println();
         System.out.println("********** PARSED RESULTS: **********");
-        System.out.printf("number = %s\n", spoonacularResponse.number);
-        for (int i = 0; i < spoonacularResponse.results.length; i++) {
+        System.out.printf("number = %s\n", complexSearchResponse.number);
+        for (int i = 0; i < complexSearchResponse.results.length; i++) {
 
-            System.out.printf("spoonacularResponse.results[%d]:\n", i);
-            SpoonacularResult result = spoonacularResponse.results[i];
-            System.out.printf(" - id = %s\n", result.id);
-            System.out.printf(" - title = %s\n", result.title);
-            System.out.printf(" - image = %s\n", result.image);
+            System.out.printf("complexSearchResponse.results[%d]:\n", i);
+            ComplexSearchResult result = complexSearchResponse.results[i];
+            //System.out.printf(" - id = %s\n", result.id);
+            //System.out.printf(" - title = %s\n", result.title);
+            //System.out.printf(" - image = %s\n", result.image);
 
             String recipeURI = "https://api.spoonacular.com/recipes/" + result.id + "/information?includeNutrition=false&apiKey=" + spoonacularApiKey;
-            HttpRequest request2 = HttpRequest.newBuilder()
+            HttpRequest requestRecipeInfo = HttpRequest.newBuilder()
                 .uri(URI.create(recipeURI))
                 .build();
-            HttpResponse<String> response2 = HTTP_CLIENT
-                .send(request2, BodyHandlers.ofString());
-            if(response2.statusCode() != 200) {
-                throw new IOException(response2.toString());
+            HttpResponse<String> responseRecipeInfo = HTTP_CLIENT
+                .send(requestRecipeInfo, BodyHandlers.ofString());
+            if(responseRecipeInfo.statusCode() != 200) {
+                throw new IOException(responseRecipeInfo.toString());
             }
-            String jsonString2 = response2.body();
+            String jsonString2 = responseRecipeInfo.body();
 
-            SpoonacularResponse spoonacularResponse2 = GSON
-                .fromJson(jsonString2, SpoonacularResponse.class);
-
-            for (int j = 0; j < spoonacularResponse2.results.length; j++)             {
-                SpoonacularResult result2 = spoonacularResponse2.results[j];
-                System.out.printf(" - sourceUrl = %s\n", result2.sourceUrl);
-            }
+            RecipeInfoResponse recipeInfoResponse = GSON
+                .fromJson(jsonString2, RecipeInfoResponse.class);
+            System.out.printf(" - id = %s\n", recipeInfoResponse.id);
+            System.out.printf(" - title = %s\n", recipeInfoResponse.title);
+            System.out.printf(" - image = %s\n", recipeInfoResponse.image);
+            System.out.printf(" - imageType = %s\n", recipeInfoResponse.imageType);
+            System.out.printf(" - sourceUrl = %s\n", recipeInfoResponse.sourceUrl);
+            System.out.printf(" - pricePerServing = %s\n", recipeInfoResponse.pricePerServing);
 
         } // for
         } catch (IOException | InterruptedException | IllegalArgumentException e) {
