@@ -47,7 +47,7 @@ public class ApiApp extends Application {
     HBox topHeader;
     TextField foodUser;
     ComboBox<String> dietUser;
-
+    ComboBox<String> countryUser;
     Button search;
 
     Label status;
@@ -67,8 +67,7 @@ public class ApiApp extends Application {
     Label titleLabel2;
     Label urlLabel2;
     Label priceLabel2;
-    //RecipeComponent rc1;
-    //RecipeComponent rc2;
+
     HBox bottomHBox;
     VBox recipe3;
     ImageView imageView3;
@@ -81,11 +80,12 @@ public class ApiApp extends Application {
     Label titleLabel4;
     Label urlLabel4;
     Label priceLabel4;
-    //RecipeComponent rc3;
-    //RecipeComponent rc4;
-    //TextArea result;
-    //ScrollPane textPane;
-    //TextFlow textFlow;
+
+    String recipeImage;
+    String recipeTitle;
+    String recipeLink;
+    double priceConverted;
+    String currencyCode;
 
     /**
      * Constructs an {@code ApiApp} object. This default (i.e., no argument)
@@ -99,15 +99,22 @@ public class ApiApp extends Application {
         this.topHeader = new HBox();
         Label title = new Label("Personalized Recipe Finder");
         title.setStyle("-fx-font-size: 26px; -fx-font-weight: bold;");
+        this.status = new Label("Type a food you would like a recipe for such as Pasta. You must also select a diet. You can also choose a currency to find out the cost of the ingredients for each recipe in different currencies. Click \"Search\" to load the top 4 recipe results...");
         foodUser = new TextField();
         foodUser.setPromptText("Enter Food: ");
         dietUser = new ComboBox<>();
         dietUser.setPromptText("Select Diet: ");
         dietUser.getItems().addAll("Gluten Free", "Ketogenic", "Vegetarian", "Lacto-Vegetarian",
         "Ovo-Vegetarian", "Vegan", "Pescatarian","Paleo", "Primal");
+        countryUser = new ComboBox<>();
+        countryUser.setPromptText("Select Country for Currency Exchange");
+        countryUser.getItems().addAll("United States Dollar(USD)", "Australian Dollar(AUD)",
+        "Brazilian Real(BRL)", "British Pound Sterling(GBP)", "Canadian Dollar(CAD)",
+        "Chinese Yuan(CNY)", "Euro(EUR)", "Indian Rupee(INR)", "Japanese Yen(JPY)",
+        "Mexican Peso(MXN)", "Russia Ruble(RUB)");
 
         search = new Button("Search");
-        status = new Label();
+        //status = new Label();
         this.resultBox = new VBox();
         this.topHBox = new HBox();
 
@@ -122,8 +129,6 @@ public class ApiApp extends Application {
         this.titleLabel2 = new Label();
         this.urlLabel2 = new Label();
         this.priceLabel2 = new Label();
-        //this.rc1 = new RecipeComponent();
-        //this.rc2 = new RecipeComponent();
         this.bottomHBox = new HBox();
 
         this.recipe3 = new VBox();
@@ -137,20 +142,14 @@ public class ApiApp extends Application {
         this.titleLabel4 = new Label();
         this.urlLabel4 = new Label();
         this.priceLabel4 = new Label();
-        //this.rc3 = new RecipeComponent();
-        //this.rc4 = new RecipeComponent();
 
-        //this.textPane = new ScrollPane();
-        //this.textFlow = new TextFlow();
-        //result = new TextArea();
-        //result.setEditable(false);
     } // ApiApp
 
 
     /**{@inheritDoc}*/
     @Override
     public void init() {
-        this.topHeader.getChildren().addAll(foodUser, dietUser, search);
+        this.topHeader.getChildren().addAll(foodUser, dietUser, countryUser, search);
         this.recipe1.getChildren().addAll(imageView1, titleLabel1, urlLabel1, priceLabel1);
         this.recipe2.getChildren().addAll(imageView2, titleLabel2, urlLabel2, priceLabel2);
         this.topHBox.getChildren().addAll(recipe1, recipe2);
@@ -159,28 +158,16 @@ public class ApiApp extends Application {
         this.bottomHBox.getChildren().addAll(recipe3, recipe4);
         this.resultBox.getChildren().addAll(topHBox, bottomHBox);
         //this.textFlow.getChildren().add(new Text("Click \"Search\" to load the recipe results..."));
-        //this.textFlow.setMaxWidth(630);
-        //this.textPane.setPrefHeight(480);
-        //this.textPane.setContent(this.textFlow);
-        this.root.getChildren().addAll(topHeader, this.resultBox);
+        this.root.getChildren().addAll(topHeader, status, this.resultBox);
     } // init
 
     /** {@inheritDoc} */
     @Override
     public void start(Stage stage) {
         this.stage = stage;
-        // demonstrate how to load local asset using "file:resources/"
-        //Image bannerImage = new Image("file:resources/readme-banner.png");
-        //ImageView banner = new ImageView(bannerImage);
-        //banner.setPreserveRatio(true);
-        //banner.setFitWidth(640);
-
-        // some labels to display information
-
-        //Gson gson = new Gson();
 
         search.setOnAction(event -> searchResults());
-
+        //exchangeRateAPITest();
         // setup scene
         scene = new Scene(root,640,480);
 
@@ -202,6 +189,10 @@ public class ApiApp extends Application {
         .create();
 
     private void searchResults() {
+        Runnable loadTask = () -> {
+            search.setDisable(true);
+            startLoading();
+        //status.setText("Loading...");
         try {
             String spoonacular_API = "https://api.spoonacular.com/recipes/complexSearch?query=";
             String food = URLEncoder.encode(foodUser.getText(), StandardCharsets.UTF_8);
@@ -229,12 +220,12 @@ public class ApiApp extends Application {
             }
 
             String jsonString = response.body();
-            //System.out.println("********** RAW JSON STRING: **********");
-            //System.out.println(jsonString.trim());
-
 
             ComplexSearchResponse complexSearchResponse = GSON
                 .fromJson(jsonString, ComplexSearchResponse.class);
+            if(complexSearchResponse.results.length < 4) {
+                throw new IllegalArgumentException("Less than 4 recipes were found. Please try another search.");
+            }
             //printRecipeInfoResponse(complexSearchResponse);
 
             for (int i = 0; i < complexSearchResponse.results.length; i++) {
@@ -253,81 +244,28 @@ public class ApiApp extends Application {
 
                 RecipeInfoResponse recipeInfoResponse = GSON
                     .fromJson(jsonString2, RecipeInfoResponse.class);
-                if(i == 0) {
-                    this.recipe1.setSpacing(10);
-                    this.recipe1.setAlignment(Pos.CENTER);
+                currencyCode = countryToCode(countryUser.getValue());
+                String exchange_url_str = "https://api.exchangerate.host/convert?from=USD&to=" + currencyCode +"&amount=" + recipeInfoResponse.pricePerServing ;
 
-                    // Create and add ImageView
-                    imageView1.setImage(new Image(recipeInfoResponse.image, 200, 200, true, true));
+                HttpRequest exchangeRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(exchange_url_str))
+                    .build();
 
-                    // Create and add title label
-                    titleLabel1.setText(recipeInfoResponse.title);
-                    titleLabel1.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
+                HttpResponse<String> exchange_Response = HTTP_CLIENT.send(exchangeRequest, BodyHandlers.ofString());
 
-                    // Create and add URL label
-                    urlLabel1.setText(recipeInfoResponse.sourceUrl);
-                    urlLabel1.setStyle("-fx-font-size: 8pt;");
-
-                    // Create and add price label
-                    priceLabel1.setText(recipeInfoResponse.pricePerServing);
-                    priceLabel1.setStyle("-fx-font-size: 8pt; -fx-font-weight: bold;");
-
-                } else if (i == 1) {
-                    this.recipe2.setSpacing(10);
-                    this.recipe2.setAlignment(Pos.CENTER);
-
-                    // Create and add ImageView
-                    imageView2.setImage(new Image(recipeInfoResponse.image, 200, 200, true, true));
-
-                    // Create and add title label
-                    titleLabel2.setText(recipeInfoResponse.title);
-                    titleLabel2.setStyle("-fx-font-size: 18pt; -fx-font-weight: bold;");
-
-                    // Create and add URL label
-                    urlLabel2.setText(recipeInfoResponse.sourceUrl);
-                    urlLabel2.setStyle("-fx-font-size: 12pt;");
-
-                    // Create and add price label
-                    priceLabel2.setText(recipeInfoResponse.pricePerServing);
-                    priceLabel2.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
-                } else if (i == 2) {
-                    this.recipe3.setSpacing(10);
-                    this.recipe3.setAlignment(Pos.CENTER);
-
-                    // Create and add ImageView
-                    imageView3.setImage(new Image(recipeInfoResponse.image, 200, 200, true, true));
-
-                    // Create and add title label
-                    titleLabel3.setText(recipeInfoResponse.title);
-                    titleLabel3.setStyle("-fx-font-size: 18pt; -fx-font-weight: bold;");
-
-                    // Create and add URL label
-                    urlLabel3.setText(recipeInfoResponse.sourceUrl);
-                    urlLabel3.setStyle("-fx-font-size: 12pt;");
-
-                    // Create and add price label
-                    priceLabel3.setText(recipeInfoResponse.pricePerServing);
-                    priceLabel3.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
-
-                } else if(i == 3) {
-                    this.recipe4.setSpacing(10);
-                    this.recipe4.setAlignment(Pos.CENTER);
-
-                    // Create and add ImageView
-                    imageView4.setImage(new Image(recipeInfoResponse.image, 200, 200, true, true));
-
-                    // Create and add title label
-                    titleLabel4.setText(recipeInfoResponse.title);
-                    titleLabel4.setStyle("-fx-font-size: 18pt; -fx-font-weight: bold;");
-
-                    // Create and add URL label
-                    urlLabel4.setText(recipeInfoResponse.sourceUrl);
-                    urlLabel4.setStyle("-fx-font-size: 12pt;");
-
-                    // Create and add price label
-                    priceLabel4.setText(recipeInfoResponse.pricePerServing);
-                    priceLabel4.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
+                if(response.statusCode() != 200) {
+                    throw new IOException(exchange_Response.toString());
                 }
+                String exchangeJsonString = exchange_Response.body();
+
+                ExchangeResponse exchangeResponse = GSON.fromJson(exchangeJsonString, ExchangeResponse.class);
+
+                recipeImage = recipeInfoResponse.image;
+                recipeTitle = recipeInfoResponse.title;
+                recipeLink = recipeInfoResponse.sourceUrl;
+                priceConverted = Math.round(exchangeResponse.result * Math.pow(10, 2))/ Math.pow(10,2);
+
+                setRecipes(i, recipeImage, recipeTitle, recipeLink, priceConverted);
 
                 System.out.printf(" - id = %s\n", recipeInfoResponse.id);
                 System.out.printf(" - title = %s\n", recipeInfoResponse.title);
@@ -335,12 +273,190 @@ public class ApiApp extends Application {
                 System.out.printf(" - imageType = %s\n", recipeInfoResponse.imageType);
                 System.out.printf(" - sourceUrl = %s\n", recipeInfoResponse.sourceUrl);
                 System.out.printf(" - pricePerServing = %s\n", recipeInfoResponse.pricePerServing);
-
+                endLoading();
             }
 
         } catch (IOException | InterruptedException | IllegalArgumentException e) {
+            errorLoading();
+            alertError(e);
             System.err.println(e);
             e.printStackTrace();
+        }
+        };
+        Thread loadThread = new Thread(loadTask);
+        loadThread.setDaemon(true);
+        loadThread.start();
+        //search.setDisable(false);
+        //status.setText("Done!");
+    }
+
+    private void setRecipes(int i, String image, String title, String link, double price) {
+        Runnable task = () -> {
+        if(i == 0) {
+                    this.recipe1.setSpacing(10);
+                    this.recipe1.setAlignment(Pos.CENTER);
+
+                    // Create and add ImageView
+                    imageView1.setImage(new Image(image, 200, 200, true, true));
+
+                    // Create and add title label
+                    titleLabel1.setText(title);
+                    titleLabel1.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
+
+                    // Create and add URL label
+                    urlLabel1.setText(link);
+                    urlLabel1.setStyle("-fx-font-size: 8pt;");
+
+                    // Create and add price label
+                    priceLabel1.setText(price + " " + currencyCode);
+                    priceLabel1.setStyle("-fx-font-size: 8pt; -fx-font-weight: bold;");
+
+                } else if (i == 1) {
+                    this.recipe2.setSpacing(10);
+                    this.recipe2.setAlignment(Pos.CENTER);
+
+                    // Create and add ImageView
+                    imageView2.setImage(new Image(image, 200, 200, true, true));
+
+                    // Create and add title label
+                    titleLabel2.setText(title);
+                    titleLabel2.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
+
+                    // Create and add URL label
+                    urlLabel2.setText(link);
+                    urlLabel2.setStyle("-fx-font-size: 8pt;");
+
+                    // Create and add price label
+                    priceLabel2.setText(price + " " + currencyCode);
+                    priceLabel2.setStyle("-fx-font-size: 8pt; -fx-font-weight: bold;");
+                } else if (i == 2) {
+                    this.recipe3.setSpacing(10);
+                    this.recipe3.setAlignment(Pos.CENTER);
+
+                    // Create and add ImageView
+                    imageView3.setImage(new Image(image, 200, 200, true, true));
+
+                    // Create and add title label
+                    titleLabel3.setText(title);
+                    titleLabel3.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
+
+                    // Create and add URL label
+                    urlLabel3.setText(link);
+                    urlLabel3.setStyle("-fx-font-size: 8pt;");
+
+                    // Create and add price label
+                    priceLabel3.setText(price + " " + currencyCode);
+                    priceLabel3.setStyle("-fx-font-size: 8pt; -fx-font-weight: bold;");
+
+                } else if(i == 3) {
+                    this.recipe4.setSpacing(10);
+                    this.recipe4.setAlignment(Pos.CENTER);
+
+                    // Create and add ImageView
+                    imageView4.setImage(new Image(image, 200, 200, true, true));
+
+                    // Create and add title label
+                    titleLabel4.setText(title);
+                    titleLabel4.setStyle("-fx-font-size: 12pt; -fx-font-weight: bold;");
+
+                    // Create and add URL label
+                    urlLabel4.setText(link);
+                    urlLabel4.setStyle("-fx-font-size: 8pt;");
+
+                    // Create and add price label
+                    priceLabel4.setText(price +  " " + currencyCode);
+                    priceLabel4.setStyle("-fx-font-size: 8pt; -fx-font-weight: bold;");
+                }
+        };
+        Platform.runLater(task);
+    }
+
+
+    private void startLoading() {
+        Runnable task = () -> {
+            search.setDisable(true);
+            status.setText("Loading...");
+        };
+        Platform.runLater(task);
+    }
+
+    private void endLoading() {
+        Runnable task = () -> {
+            search.setDisable(false);
+            status.setText("Done!");
+        };
+        Platform.runLater(task);
+    }
+
+    private void errorLoading() {
+        Runnable task = () -> {
+            search.setDisable(false);
+            status.setText("Last attempt to get recipes failed...");
+        };
+        Platform.runLater(task);
+    }
+    public static void alertError(Throwable cause) {
+        TextArea text = new TextArea("Exception: " + cause.toString());
+        Runnable task = () -> {
+            text.setEditable(false);
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.getDialogPane().setContent(text);
+            alert.setResizable(true);
+        };
+        Platform.runLater(task);
+    }
+
+    private String countryToCode(String currency){
+        if(currency == "United States Dollar(USD)") {
+            return "USD";
+        } else if(currency == "Australian Dollar(AUD)") {
+            return "AUD";
+        } else if(currency == "Brazilian Real(BRL)") {
+            return "BRL";
+        } else if (currency == "British Pound Sterling(GBP)") {
+            return "GBP";
+        } else if(currency == "Canadian Dollar(CAD)") {
+            return "CAD";
+        } else if(currency == "Chinese Yuan(CNY)") {
+            return "CNY";
+        } else if(currency == "Euro(EUR)") {
+            return "EUR";
+        } else if(currency == "Indian Rupee(INR)") {
+            return "INR";
+        } else if(currency == "Japanese Yen(JPY)") {
+            return "JPY";
+        } else if(currency == "Mexican Peso(MXN)") {
+            return "MXN";
+        } else if(currency == "Russia Ruble(RUB)") {
+            return "RUB";
+        } else {
+            return "USD";
+        }
+    }
+
+    private void exchangeRateAPITest(){
+        try {
+            String url_str = "https://api.exchangerate.host/convert?from=USD&to=EUR&amount=1200";
+
+        URL url = new URL(url_str);
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(url_str))
+            .build();
+
+        HttpResponse<String> response = HTTP_CLIENT.send(request, BodyHandlers.ofString());
+
+        if(response.statusCode() != 200) {
+            throw new IOException(response.toString());
+        }
+        String jsonString = response.body();
+
+        ExchangeResponse exchangeResponse = GSON.fromJson(jsonString, ExchangeResponse.class);
+
+        System.out.println(exchangeResponse.result);
+        } catch(IOException | InterruptedException e) {
+            System.err.println(e);
+            e.printStackTrace();
+
         }
     }
 
